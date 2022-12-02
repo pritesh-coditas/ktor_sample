@@ -2,6 +2,7 @@ package com.example
 
 import com.example.auth.JwtService
 import com.example.auth.UserSession
+import com.example.auth.hashPassword
 import com.example.repository.DatabaseFactory
 import com.example.repository.ResumeRepository
 import com.example.repository.UserRepository
@@ -24,24 +25,24 @@ fun main() {
         val resumeRepository = ResumeRepository()
         val userRepository = UserRepository()
         val jwt = JwtService()
-        val hash = {s:String->s}
-        install(Sessions) {
-            cookie<UserSession>("USER_SESSION") {
-                cookie.extensions["SameSite"] = "lax" // doubt
-            }
-        }
+        val hash = {s:String -> hashPassword(s)}
 
         install(Authentication) {
-            jwt("jwt") {
+            jwt {
                 verifier(jwt.verifier)
-                realm = "Todo Server"
+                realm = "Civi Server"
                 validate {
                     val payload = it.payload
                     val claim = payload.getClaim("userId")
-                    val claimString = claim.asInt()
-                    val user = userRepository.getUserByUserId(claimString.toString())
+                    val user = userRepository.getUserByUserId(claim.asString())
                     user
                 }
+            }
+        }
+
+        install(Sessions) {
+            cookie<UserSession>("USER_SESSION") {
+                cookie.extensions["SameSite"] = "lax" // doubt
             }
         }
 
@@ -93,5 +94,7 @@ fun Application.configureSerialization() {
         }
     }
 }
+
+
 
 

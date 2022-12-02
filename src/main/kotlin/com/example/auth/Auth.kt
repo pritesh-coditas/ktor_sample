@@ -5,6 +5,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 val hashKey = hex(System.getenv("SECRET_KEY")) // convert to hex string.
+
 val hmacKey = SecretKeySpec(hashKey,"HmacSHA1") //secured hash algorithm to produce 160 bit hash value.
 
 fun hashPassword(password:String):String{

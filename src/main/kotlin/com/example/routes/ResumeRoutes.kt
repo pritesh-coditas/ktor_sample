@@ -6,6 +6,7 @@ import com.example.repository.UserRepository
 import com.example.resume_model.Resume
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -36,6 +37,7 @@ fun Route.resumeRouting(resumeDb: ResumeRepository, userDb: UserRepository) {
             }
         }
 
+        // authenticate("jwt") {
         post {
             val resume = call.receive<Resume>()
             val user = call.sessions.get<UserSession>()?.let {
@@ -44,6 +46,7 @@ fun Route.resumeRouting(resumeDb: ResumeRepository, userDb: UserRepository) {
             user?.userId?.let { it1 -> resumeDb.insert(it1, resume.userName, resume.userMobile) }
             call.respondText("Resume stored Successfully", status = HttpStatusCode.Created)
         }
+        //     }
 
         delete("{resumeId?}") {
             val resumeId = call.parameters["resumeId"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
@@ -66,19 +69,44 @@ fun Route.resumeRouting(resumeDb: ResumeRepository, userDb: UserRepository) {
             }
         }
 
-        patch("{resumeId?}") {
-            val resumeId = call.parameters["resumeId"] ?: return@patch call.respond(HttpStatusCode.BadRequest)
+            post("{resumeId?}") {
 
-            val resume = call.receive<Resume>()
+                val user = call.sessions.get<UserSession>()?.let {
+                    userDb.getUserByUserId(it.userId)
+                }
 
-            val result = resumeDb.updateResume(resume.userId, resumeId.toInt(), resume.userName, resume.userMobile)
-            if (result == 1) {
-                call.respondText("Resume updated at $resumeId", status = HttpStatusCode.OK)
-            } else {
-                call.respondText("No resume for index $resumeId", status = HttpStatusCode.NotFound)
+               // call.application.environment.log.info("$user")
+
+                val resumeId = call.parameters["resumeId"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val resume = call.receive<Resume>()
+                if (user != null) {
+                    val result =
+                        resumeDb.updateResume(user.userId, resumeId.toInt(), resume.userName, resume.userMobile)
+                    if (result == 1) {
+                        call.respondText("Resume updated at $resumeId", status = HttpStatusCode.OK)
+                    } else {
+                        call.respondText("No resume for index $resumeId", status = HttpStatusCode.NotFound)
+                    }
+                } else {
+                    call.respondText("problem getting user...")
+                }
+            }
+
+        get("/session") {
+            call.sessions.get<UserSession>()?.let {
+                call.respondText("$it")
+            }
+        }
+
+        authenticate {
+            get("/authenticate"){
+                val currentUser = call.sessions.get<UserSession>()?.let {
+                    println(it.userId)
+                    userDb.getUserByUserId(it.userId)
+                }
+                call.respondText("$currentUser")
             }
         }
     }
+
 }
-
-

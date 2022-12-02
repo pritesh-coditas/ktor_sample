@@ -136,5 +136,11 @@ fun Route.userRouting(
                 call.respondText("getting problem")
             }
         }
+
+        get("/logout") {
+            call.sessions.clear<UserSession>()
+            call.respondText("logout")
+            //call.respondRedirect("/")
+        }
     }
 }
