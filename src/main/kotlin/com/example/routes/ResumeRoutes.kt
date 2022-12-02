@@ -1,23 +1,21 @@
 package com.example.routes
 
+import com.example.auth.UserSession
 import com.example.repository.ResumeRepository
+import com.example.repository.UserRepository
 import com.example.resume_model.Resume
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 
-fun Route.resumeRouting(db: ResumeRepository) {
+fun Route.resumeRouting(resumeDb: ResumeRepository, userDb: UserRepository) {
+
     route("/resume") {
-
         get {
-            /*       if(resumeList.isNotEmpty()){
-                       call.respond(resumeList)
-                   }else{
-                       call.respondText("No resume found", status = HttpStatusCode.OK)
-                   }*/
-            val resumeList = db.getAllResume()
+            val resumeList = resumeDb.getAllResume()
             if (resumeList.isNotEmpty()) {
                 call.respond(status = HttpStatusCode.OK, resumeList)
             } else {
@@ -30,12 +28,8 @@ fun Route.resumeRouting(db: ResumeRepository) {
                 "Missing Id",
                 status = HttpStatusCode.BadRequest
             )
-            /*val resume = resumeList.find{it.userId.equals(userId)}?: return@get call.respondText("No resume with this Id $userId", status = HttpStatusCode.NotFound)
-             call.respond(resume)*/
-
-            val resume = db.getResumeByUserId(userId)
-            call.respond("$resume")
-            if (resume != null) {
+            val resume = resumeDb.getResumeByUserId(userId)
+            if (resume.isNotEmpty()) {
                 call.respond(status = HttpStatusCode.OK, resume)
             } else {
                 call.respondText("No resume with this Id $userId", status = HttpStatusCode.NotFound)
@@ -44,25 +38,31 @@ fun Route.resumeRouting(db: ResumeRepository) {
 
         post {
             val resume = call.receive<Resume>()
-
-            db.insert(resume.userId, resume.userName, resume.userMobile)
-
+            val user = call.sessions.get<UserSession>()?.let {
+                userDb.getUserByUserId(it.userId)
+            }
+            user?.userId?.let { it1 -> resumeDb.insert(it1, resume.userName, resume.userMobile) }
             call.respondText("Resume stored Successfully", status = HttpStatusCode.Created)
         }
 
         delete("{resumeId?}") {
             val resumeId = call.parameters["resumeId"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
-            /*            if (resumeList.removeIf { it.resumeId.equals(resumeId) }) {
-                            call.respondText("Resume removed", status = HttpStatusCode.Accepted)
-                        } else {
-                            call.respondText("Not Found", status = HttpStatusCode.NotFound)
-                        }*/
-
-            val result = db.deleteByResumeId(resumeId.toInt())
+            val result = resumeDb.deleteByResumeId(resumeId.toInt())
             if (result == 1) {
                 call.respondText("Resume deleted", status = HttpStatusCode.Accepted)
             } else {
                 call.respondText("Not Found", status = HttpStatusCode.NotFound)
+            }
+        }
+
+        delete("{userId?}") {
+            val userId = call.parameters["userId"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+
+            val result = resumeDb.deleteByUserId(userId)
+            if (result == 1) {
+                call.respondText("All resume Deleted with user", status = HttpStatusCode.Accepted)
+            } else {
+                call.respondText("Not found", status = HttpStatusCode.NotFound)
             }
         }
 
@@ -71,7 +71,7 @@ fun Route.resumeRouting(db: ResumeRepository) {
 
             val resume = call.receive<Resume>()
 
-            val result = db.update(resume.userId, resumeId.toInt(), resume.userName, resume.userMobile)
+            val result = resumeDb.updateResume(resume.userId, resumeId.toInt(), resume.userName, resume.userMobile)
             if (result == 1) {
                 call.respondText("Resume updated at $resumeId", status = HttpStatusCode.OK)
             } else {

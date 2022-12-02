@@ -14,9 +14,10 @@ interface ResumeDao {
 
    suspend fun getResumeByUserId(userId:String):List<Resume>?
 
+   suspend fun deleteByUserId(userId:String):Int
    suspend fun deleteByResumeId(resumeId:Int):Int
 
-   suspend fun update(
+   suspend fun updateResume(
        userId: String,
        resumeId: Int,
        userName: String,

@@ -1,25 +1,53 @@
 package com.example
 
-import com.example.plugins.resumeData
+import com.example.auth.JwtService
+import com.example.auth.UserSession
 import com.example.repository.DatabaseFactory
 import com.example.repository.ResumeRepository
+import com.example.repository.UserRepository
 import com.example.routes.resumeRouting
+import com.example.routes.userRouting
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
         configureSerialization()
-        module()
-      //  configureRouting()
         DatabaseFactory.init()
-        val db = ResumeRepository()
+        val resumeRepository = ResumeRepository()
+        val userRepository = UserRepository()
+        val jwt = JwtService()
+        val hash = {s:String->s}
+        install(Sessions) {
+            cookie<UserSession>("USER_SESSION") {
+                cookie.extensions["SameSite"] = "lax" // doubt
+            }
+        }
+
+        install(Authentication) {
+            jwt("jwt") {
+                verifier(jwt.verifier)
+                realm = "Todo Server"
+                validate {
+                    val payload = it.payload
+                    val claim = payload.getClaim("userId")
+                    val claimString = claim.asInt()
+                    val user = userRepository.getUserByUserId(claimString.toString())
+                    user
+                }
+            }
+        }
+
         routing {
-            resumeRouting(db)
+            resumeRouting(resumeRepository,userRepository)
+            userRouting(userRepository,resumeRepository,jwt,hash)
         }
     }
         .start(wait = true)
@@ -58,25 +86,12 @@ fun main(args:Array<String>):Unit{
 
 }*/
 
-fun Application.module() {
-    resumeData()
-}
-
-fun Application.configureRouting() {
+fun Application.configureSerialization() {
     routing {
-       // resumeRouting()
-    }
-}
-
-fun Application.configureSerialization(){
-    routing{
-        install(ContentNegotiation){
+        install(ContentNegotiation) {
             json()
         }
     }
 }
 
-fun Application.configureDataBase(){
-    DatabaseFactory.init()
-}
 

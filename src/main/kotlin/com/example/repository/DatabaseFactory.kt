@@ -1,6 +1,7 @@
 package com.example.repository
 
 import com.example.resume_model.ResumeTable
+import com.example.user_model.UserTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +16,7 @@ object DatabaseFactory {
         Database.connect(hikari())
         transaction {
             SchemaUtils.create(ResumeTable)
+            SchemaUtils.create(UserTable)
         }
     }
 
@@ -23,7 +25,7 @@ object DatabaseFactory {
         val config = HikariConfig()
         config.driverClassName = System.getenv("JDBC_DRIVER") // post_gre driver.
         config.jdbcUrl = System.getenv("JDBC_DATABASE_URL") // url for post_gre database.
-         config.maximumPoolSize = 3 // number of database connections between database and application.
+        config.maximumPoolSize = 3 // number of database connections between database and application.
         config.isAutoCommit = false // start new transaction after each commit.
         config.transactionIsolation =
             "TRANSACTION_REPEATABLE_READ" // same data for B transaction for 2nd time even after data changed by transaction A.
@@ -31,9 +33,8 @@ object DatabaseFactory {
         return HikariDataSource(config)
     }
 
-    //doubt
-    suspend fun<T> dbQuery(block: ()->T):T =
-        withContext(Dispatchers.IO){
+    suspend fun <T> dbQuery(block: () -> T): T =
+        withContext(Dispatchers.IO) {
             transaction {
                 block()
             }

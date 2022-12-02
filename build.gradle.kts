@@ -51,5 +51,18 @@ dependencies {
     implementation("com.zaxxer:HikariCP:5.0.1")
 
 
+    // session
+    implementation("io.ktor:ktor-server-sessions:$ktor_version")
+
+    // authentication
+/*    implementation("io.ktor:ktor-server-auth:$ktor_version")
+
+    implementation ("io.ktor:ktor-auth:1.6.8")
+    implementation ("io.ktor:ktor-auth-jwt:1.6.8")*/
+    implementation ("io.ktor:ktor-gson:1.6.8")
+
+    implementation("io.ktor:ktor-server-auth-jvm:$ktor_version")
+    implementation("io.ktor:ktor-server-auth-jwt-jvm:$ktor_version")
+
 }
 
